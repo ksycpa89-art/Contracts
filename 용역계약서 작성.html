@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이촌회계법인 — 용역계약서 생성기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --border: #E2DDD6;
+    --accent: #1A1A1A;
+    --accent-light: #4A4A4A;
+    --muted: #8A8680;
+    --highlight: #C8A96E;
+    --danger: #C0392B;
+    --radius: 4px;
+    --font-serif: 'Noto Serif KR', serif;
+    --font-sans: 'Noto Sans KR', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font-sans);
+    color: var(--accent);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-brand {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    color: #fff;
+  }
+  .header-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Layout */
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  /* Step progress */
+  .progress {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 2.5rem;
+  }
+  .progress-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .progress-step:last-child { flex: 0; }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--surface);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .step-num.active { border-color: var(--accent); color: var(--accent); background: #fff; }
+  .step-num.done { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .step-label {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .step-label.active { color: var(--accent); font-weight: 500; }
+  .progress-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    margin: 0 8px;
+  }
+
+  /* Page sections */
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Section titles */
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    margin-top: 1.8rem;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* Type cards */
+  .type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .type-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .type-card:hover { border-color: #B0A898; }
+  .type-card.selected {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+  }
+  .type-card.selected .type-num { color: var(--highlight); }
+  .type-card.selected .type-desc { color: rgba(255,255,255,0.6); }
+  .type-num {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--highlight);
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .type-title {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 5px;
+  }
+  .type-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* Form fields */
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .field-grid.full { grid-template-columns: 1fr; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    color: var(--accent-light);
+    text-transform: uppercase;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--accent);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 70px; }
+
+  /* Panel (card wrapper) */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .panel-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+
+  /* Scope checkboxes */
+  .scope-list { display: flex; flex-direction: column; gap: 6px; }
+  .scope-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-size: 13px;
+    line-height: 1.5;
+    user-select: none;
+  }
+  .scope-item:hover { border-color: #B0A898; }
+  .scope-item.on { border-color: var(--accent); background: #FAFAF8; }
+  .scope-item input[type=checkbox] { margin-top: 2px; flex-shrink: 0; accent-color: var(--accent); }
+
+  /* Fee rows */
+  .fee-row {
+    display: grid;
+    grid-template-columns: 100px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .fee-row:last-child { margin-bottom: 0; }
+  .fee-label { font-size: 13px; color: var(--accent-light); font-weight: 500; }
+  .fee-pct {
+    font-size: 11px;
+    color: var(--muted);
+    background: #F0EDE8;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 2rem;
+  }
+  .btn {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 22px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--accent-light);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-solid {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    color: #fff;
+  }
+  .btn-solid:hover { background: #333; }
+  .btn-gold {
+    background: var(--highlight);
+    border: 1px solid var(--highlight);
+    color: #fff;
+  }
+  .btn-gold:hover { background: #B8954A; }
+
+  /* Result */
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .result-tag {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--highlight);
+    font-weight: 500;
+  }
+  .result-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    font-family: var(--font-serif);
+    font-size: 13px;
+    line-height: 2;
+    color: var(--accent);
+    white-space: pre-wrap;
+    max-height: 560px;
+    overflow-y: auto;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.5rem 0;
+  }
+
+  @media (max-width: 600px) {
+    .field-grid { grid-template-columns: 1fr; }
+    .fee-row { grid-template-columns: 80px 1fr; }
+    .fee-pct { display: none; }
+    .type-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="header-brand">이촌회계법인</div>
+    <div class="header-sub">용역계약서 생성기</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Progress -->
+  <div class="progress" id="progress">
+    <div class="progress-step">
+      <div class="step-num active" id="sn0">1</div>
+      <div class="step-label active" id="sl0">유형 선택</div>
+    </div>
+    <div class="progress-line"></div>
+    <div class="progress-step">
+      <div class="step-num" id="sn1">2</div>
+      <div class="step-label" id="sl1">기본 정보</div>
+    </div>
+    <div class="progress-line"></div>
+    <div class="progress-step">
+      <div class="step-num" id="sn2">3</div>
+      <div class="step-label" id="sl2">스콥 & 보수</div>
+    </div>
+    <div class="progress-line"></div>
+    <div class="progress-step">
+      <div class="step-num" id="sn3">4</div>
+      <div class="step-label" id="sl3">계약서 확인</div>
+    </div>
+  </div>
+
+  <!-- Page 0: 유형 선택 -->
+  <div class="page active" id="page0">
+    <div class="section-label">용역 유형을 선택하세요</div>
+    <div class="type-grid" id="typeGrid">
+      <div class="type-card" data-type="1" onclick="selectType(this)">
+        <div class="type-num">TYPE 01</div>
+        <div class="type-title">외부평가기관 의견서 + Valuation</div>
+        <div class="type-desc">공시용 외부평가보고서 및 DCF 기업가치평가</div>
+      </div>
+      <div class="type-card" data-type="2" onclick="selectType(this)">
+        <div class="type-num">TYPE 02</div>
+        <div class="type-title">FDD (재무실사)</div>
+        <div class="type-desc">QoE, QoA/L, Net Debt 분석 등 재무실사 전반</div>
+      </div>
+      <div class="type-card" data-type="3" onclick="selectType(this)">
+        <div class="type-num">TYPE 03</div>
+        <div class="type-title">자산부채실사 + PPA</div>
+        <div class="type-desc">사업결합 자산부채 실사 및 취득원가 배분(PPA)</div>
+      </div>
+      <div class="type-card" data-type="4" onclick="selectType(this)">
+        <div class="type-num">TYPE 04</div>
+        <div class="type-title">옵션평가 (CB / BW 등)</div>
+        <div class="type-desc">비상장 기초자산 DCF + 전환사채/신주인수권 이항모형 평가</div>
+      </div>
+      <div class="type-card" data-type="5" onclick="selectType(this)">
+        <div class="type-num">TYPE 05</div>
+        <div class="type-title">재무보고목적 손상평가</div>
+        <div class="type-desc">종속·관계기업 투자주식 사용가치 및 손상 검토</div>
+      </div>
+      <div class="type-card" data-type="6" onclick="selectType(this)">
+        <div class="type-num">TYPE 06</div>
+        <div class="type-title">주식선택권(스톡옵션) 평가</div>
+        <div class="type-desc">상장사 주식선택권 이항모형 공정가치 평가</div>
+      </div>
+      <div class="type-card" data-type="7" onclick="selectType(this)">
+        <div class="type-num">TYPE 07</div>
+        <div class="type-title">DCF Valuation</div>
+        <div class="type-desc">지분투자 등 단독 DCF 기업가치 평가</div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-solid" onclick="go(1)">다음 단계 →</button>
+    </div>
+  </div>
+
+  <!-- Page 1: 기본 정보 -->
+  <div class="page" id="page1">
+    <div class="panel">
+      <div class="panel-title">갑 (의뢰인) 정보</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>회사명</label>
+          <input type="text" id="c_name" placeholder="주식회사 OO">
+        </div>
+        <div class="field">
+          <label>대표자</label>
+          <input type="text" id="c_ceo" placeholder="대표이사 홍길동">
+        </div>
+      </div>
+      <div class="field-grid full">
+        <div class="field">
+          <label>주소</label>
+          <input type="text" id="c_addr" placeholder="서울특별시 강남구 ...">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">평가대상 정보</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>평가대상 회사명 (병, 해당시)</label>
+          <input type="text" id="t_name" placeholder="주식회사 OO">
+        </div>
+        <div class="field">
+          <label>평가기준일</label>
+          <input type="text" id="t_date" placeholder="2025년 12월 31일">
+        </div>
+      </div>
+      <div class="field-grid full">
+        <div class="field">
+          <label>평가대상 내용</label>
+          <textarea id="t_target" placeholder="예: 보통주 및 전환사채(2차 발행분), 주식선택권 3종 등"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">계약일</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>계약일</label>
+          <input type="text" id="c_date" placeholder="2025년  월   일">
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="go(0)">← 이전</button>
+      <button class="btn btn-solid" onclick="go(2)">다음 단계 →</button>
+    </div>
+  </div>
+
+  <!-- Page 2: 스콥 & 보수 -->
+  <div class="page" id="page2">
+    <div class="panel">
+      <div class="panel-title">용역 스콥 선택</div>
+      <div class="scope-list" id="scopeList"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">총 용역보수</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>보수 금액 (VAT 별도)</label>
+          <input type="text" id="fee_total" placeholder="예: 30,000,000">
+        </div>
+        <div class="field">
+          <label>보수 텍스트 (한글)</label>
+          <input type="text" id="fee_text" placeholder="예: 삼천만원">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">지급 구조</div>
+      <div id="feeRows"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">특이사항 (선택)</div>
+      <div class="field-grid full">
+        <div class="field">
+          <textarea id="special" placeholder="예: 해외출장 예상, 복수 평가대상 일괄 계약, 추가 협의 사항 등"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="go(1)">← 이전</button>
+      <button class="btn btn-solid" onclick="generate()">계약서 생성 →</button>
+    </div>
+  </div>
+
+  <!-- Page 3: 결과 -->
+  <div class="page" id="page3">
+    <div class="result-header">
+      <span class="result-tag">Draft — 이촌회계법인</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="copyText()">텍스트 복사</button>
+        <button class="btn btn-gold" onclick="go(0)">← 새 계약서</button>
+      </div>
+    </div>
+    <div class="result-box" id="resultBox"></div>
+    <div style="margin-top:12px;font-size:11px;color:var(--muted);line-height:1.7;">
+      ※ 본 계약서 초안은 참고용이며, 최종 계약 전 법률 검토를 권장합니다.<br>
+      ※ 별첨 계약일반조건은 기존 표준 양식을 사용하세요.
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="go(2)">← 수정하기</button>
+      <button class="btn btn-solid" onclick="printPage()">인쇄 / PDF 저장</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const TYPES = {
+  1: {
+    name: "외부평가기관 의견서 + Valuation",
+    short: "가치평가 용역",
+    method: "현금흐름할인법(DCF) 및 시장접근법(EV/EBITDA 등)",
+    scopes: [
+      "사업계획에 대한 검토 및 의견 제시(Review and comment)",
+      "손익항목 추정에 사용된 가정 검토(Review and comment)",
+      "할인율 및 성장률 가정 검토",
+      "현금흐름할인법(DCF)에 의한 영업가치 검토",
+      "민감도 분석(주요 가정 변경 시 기업가치에 미치는 영향)",
+      "공시용 외부평가기관 평가보고서 작성"
+    ],
+    fees: [
+      { label: "기본보수", timing: "계약체결일", pct: "50%" },
+      { label: "자문보수", timing: "최종보고서 제출 시", pct: "50%" }
+    ]
+  },
+  2: {
+    name: "FDD (재무실사)",
+    short: "재무실사 용역",
+    method: "재무실사(Financial Due Diligence)",
+    scopes: [
+      "인수대상기업의 Business process에 대한 이해",
+      "주요 회계정책 및 회계처리 방법 검토",
+      "Quality of Earnings 분석 및 검토(고객별 수익구조, 원가구조, EBITDA 분석 등)",
+      "Cash flow 및 Quality of Assets/Liabilities 분석(BS, CapEx, NWC 등)",
+      "차입금 약정사항 및 주요 우발부채 검토",
+      "Net Cash/Debt 검토",
+      "위 사항에 대한 FDD 보고서 작성"
+    ],
+    fees: [
+      { label: "계약금", timing: "계약체결 시", pct: "50%" },
+      { label: "잔금", timing: "최종보고서 제출 시", pct: "50%" }
+    ]
+  },
+  3: {
+    name: "자산부채실사 + PPA",
+    short: "자산부채실사 및 PPA 평가 용역",
+    method: "현금흐름할인법(DCF) 및 식별가능 자산·부채 공정가치 평가",
+    scopes: [
+      "평가기준일 현재 피취득기업 자산·부채에 대한 실사",
+      "이전대가(취득원가) 공정가치 평가",
+      "식별가능 자산·부채 공정가치 평가",
+      "사업결합원가 배분(Purchase Price Allocation, PPA)",
+      "평가보고서 작성",
+      "실사 및 평가에 대한 감사인 질의대응"
+    ],
+    fees: [
+      { label: "계약금", timing: "계약체결 시", pct: "43%" },
+      { label: "중도금", timing: "자산부채 실사보고서 제출 시", pct: "14%" },
+      { label: "잔금", timing: "최종 PPA 평가보고서 제출 시", pct: "43%" }
+    ]
+  },
+  4: {
+    name: "옵션평가 (CB / BW 등)",
+    short: "전환증권 공정가치 평가 용역",
+    method: "현금흐름할인법(DCF, 기초자산) 및 이항모형(전환옵션)",
+    scopes: [
+      "기초자산(비상장 보통주)에 대한 평가기준일 현재 공정가치 평가(DCF)",
+      "전환사채 / 신주인수권부사채에 대한 공정가치 평가(이항모형)",
+      "위 항들에 대한 평가보고서 작성",
+      "평가에 대한 감사인 질의대응"
+    ],
+    fees: [
+      { label: "계약금", timing: "계약체결 시", pct: "25%" },
+      { label: "잔금", timing: "최종보고서 제출 시", pct: "75%" }
+    ]
+  },
+  5: {
+    name: "재무보고목적 손상평가",
+    short: "재무보고목적 가치평가/검토 용역",
+    method: "현금흐름할인법(사용가치) 및 순공정가치법",
+    scopes: [
+      "각 평가기준일 현재 평가대상에 대한 가치평가기법에 따른 공정가치 평가",
+      "종속기업 투자주식 사용가치 평가 및 손상 검토",
+      "종속기업 영업권 손상 검토",
+      "관계기업 투자주식 사용가치 평가",
+      "금융자산 공정가치 평가",
+      "위 항들에 대한 평가보고서 작성",
+      "평가에 대한 감사인 질의대응"
+    ],
+    fees: [
+      { label: "계약금", timing: "계약체결 시", pct: "30%" },
+      { label: "잔금", timing: "최종보고서 제출 시", pct: "70%" }
+    ]
+  },
+  6: {
+    name: "주식선택권(스톡옵션) 평가",
+    short: "주식선택권 공정가치 평가 용역",
+    method: "이항모형(기초자산: 평가기준일 종가 적용)",
+    scopes: [
+      "각 평가기준일 현재 부여된 주식선택권에 대한 이항모형에 따른 공정가치 평가",
+      "위 항에 대한 평가보고서 작성",
+      "평가에 대한 감사인 질의대응"
+    ],
+    fees: [
+      { label: "잔금", timing: "최종보고서 발행 시", pct: "100%" }
+    ]
+  },
+  7: {
+    name: "DCF Valuation",
+    short: "공정가치 평가/검토 용역",
+    method: "현금흐름할인법(DCF)",
+    scopes: [
+      "각 평가기준일 현재 평가대상에 대한 현금흐름할인법(DCF)에 따른 공정가치 평가",
+      "위 항들에 대한 평가보고서 작성",
+      "평가에 대한 감사인 질의대응"
+    ],
+    fees: [
+      { label: "잔금", timing: "최종보고서 제출 시", pct: "100%" }
+    ]
+  }
+};
+
+let selectedType = null;
+let currentPage = 0;
+
+function selectType(el) {
+  document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedType = parseInt(el.dataset.type);
+}
+
+function updateProgress(n) {
+  for (let i = 0; i < 4; i++) {
+    const num = document.getElementById('sn' + i);
+    const lbl = document.getElementById('sl' + i);
+    num.className = 'step-num' + (i === n ? ' active' : i < n ? ' done' : '');
+    if (i < n) num.textContent = '✓';
+    else num.textContent = i + 1;
+    lbl.className = 'step-label' + (i === n ? ' active' : '');
+  }
+}
+
+function go(n) {
+  if (n === 1 && !selectedType) { alert('용역 유형을 선택해주세요.'); return; }
+  if (n === 2) buildScopeAndFee();
+  document.querySelectorAll('.page').forEach((p, i) => p.classList.toggle('active', i === n));
+  updateProgress(n);
+  currentPage = n;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function buildScopeAndFee() {
+  const t = TYPES[selectedType];
+
+  // Scopes
+  const sl = document.getElementById('scopeList');
+  sl.innerHTML = t.scopes.map((s, i) => `
+    <div class="scope-item on" id="sc${i}" onclick="toggleScope(this)">
+      <input type="checkbox" checked onclick="event.stopPropagation()"> ${s}
+    </div>`).join('');
+
+  // Fee rows
+  const fr = document.getElementById('feeRows');
+  fr.innerHTML = t.fees.map((f, i) => `
+    <div class="fee-row">
+      <span class="fee-label">${f.label}</span>
+      <div class="field" style="margin:0">
+        <input type="text" id="fee_${i}" placeholder="${f.timing}에 지급 (금액 입력)">
+      </div>
+      <span class="fee-pct">${f.pct}</span>
+    </div>`).join('');
+}
+
+function toggleScope(el) {
+  el.classList.toggle('on');
+  el.querySelector('input').checked = el.classList.contains('on');
+}
+
+function generate() {
+  const t = TYPES[selectedType];
+  const cName = document.getElementById('c_name').value || '[의뢰인 회사명]';
+  const cCeo = document.getElementById('c_ceo').value || '대표이사 [성명]';
+  const cAddr = document.getElementById('c_addr').value || '[주소]';
+  const tName = document.getElementById('t_name').value;
+  const tDate = document.getElementById('t_date').value || '[평가기준일]';
+  const tTarget = document.getElementById('t_target').value;
+  const cDate = document.getElementById('c_date').value || '2025년     월     일';
+  const feeTotal = document.getElementById('fee_total').value || '[금액]';
+  const feeText = document.getElementById('fee_text').value || '[한글금액]';
+  const special = document.getElementById('special').value;
+
+  const scopes = [];
+  t.scopes.forEach((s, i) => {
+    const el = document.getElementById('sc' + i);
+    if (el && el.classList.contains('on')) scopes.push(s);
+  });
+
+  const targetStr = tName ? `${tName}(이하 "병"이라 한다)` : null;
+
+  const feeLines = t.fees.map((f, i) => {
+    const v = document.getElementById('fee_' + i)?.value || `[${f.label} 금액]`;
+    return `    - "을"은 제1항의 보수금액과 관련하여, ${f.label} 금 ${v}원을 ${f.timing}에 "갑"에게 청구하고, "갑"은 청구일로부터 14일 이내에 현금으로 "을"에게 지급하기로 한다.`;
+  }).join('\n');
+
+  const targetSection = tTarget
+    ? `\n    평가대상: ${tTarget}`
+    : '';
+
+  const intro = targetStr
+    ? `${cName}(이하 "갑"이라 한다)는 "갑"이 보유한 ${targetStr} 관련 ${t.short}(이하 "본 건")을 위하여 이촌회계법인(이하 "을"이라 한다)을 용역기관으로 선정하고 아래와 같이 용역계약(이하 "본 계약")을 체결한다.`
+    : `${cName}(이하 "갑"이라 한다)는 재무보고목적의 ${t.short}(이하 "본 건")을 위하여 이촌회계법인(이하 "을"이라 한다)을 용역기관으로 선정하고 아래와 같이 용역계약(이하 "본 계약")을 체결한다.`;
+
+  const text = `용 역 계 약 서
+(${t.name})
+
+
+[갑]  ${cName}
+[을]  이촌회계법인
+
+
+─────────────────────────────────────
+
+${intro}
+
+
+제1조 【계약의 목적】
+
+    본 계약은 "갑"이 "을"에게 본 건 ${t.short} 업무를 위탁하고 "을"이 이를 수행함에 필요한 제반사항과 "갑"과 "을" 간의 권리·의무 및 협력사항을 분명히 정함으로써 상호 신뢰를 바탕으로 성공적인 용역을 수행하는 데 그 목적이 있다.
+
+
+제2조 【용역의 범위】
+
+    본 계약에 의거하여 "을"이 "갑"을 위해 제공할 용역의 범위는 다음과 같다.
+
+${scopes.map((s, i) => `    ${i + 1}. ${s}`).join('\n')}${targetSection}
+
+
+제3조 【가치평가 방법】
+
+    가치평가 기법은 ${t.method}을 적용하여 평가하기로 하며, 평가기법에 변경이 필요한 경우 상호합의 하에 조정하기로 한다.
+
+    "갑"은 공정가치의 평가는 다양한 가정과 추정을 근거로 작성되며, 이러한 가정 및 추정은 경제전망의 변화, 미래 산업환경과 경영환경의 변화, 회사의 경영전략과 투자의사결정, 인적자원의 변동 등 다양한 요소에 따라 변동될 수 있으므로 "을"이 검토한 가치평가 결과가 본 건의 미래 실제가치와 동일할 것이라고 확인하거나 보증하지 않는다는 사실을 인지한다. 또한 다른 가치평가 방법이나 다른 가정이 사용될 경우 가치평가 결과는 "을"의 보고서 결과와 중대한 차이가 발생될 수 있음을 이해한다.
+
+
+제4조 【용역수행기간】
+
+    본 계약의 용역수행기간은 양 당사자가 본 계약발효일 또는 "을"의 업무착수일 중 빠른 날로부터 최종용역보고서를 제출하는 날까지로 한다. 단, 당사자간의 협의에 따라 문서로 동의한 때에는 기간을 연장할 수 있으며 연장기간에 대한 보수는 별도로 협의하여 정하기로 한다.
+
+
+제5조 【용역보수 및 지급방법】
+
+    "을"의 제2조의 용역수행에 대한 보수금액은 다음 각 호와 같다.
+
+    1. 보수금액
+    "갑"은 본 계약과 관련하여 제2조에서 정한 "을"의 용역에 대한 보수는 총 금 ${feeText}(${feeTotal}원)으로 한다.
+
+    2. 부가가치세
+    "갑"이 "을"에게 지급하는 보수 및 비용에 따른 부가가치세는 "갑"이 별도로 부담한다.
+
+    3. 지급방법
+${feeLines}
+    - "갑"이 "을"에게 각 보수의 지급을 지체한 경우에는 "갑"은 "을"에게 지급하기로 한 다음날로부터 연 12% 비율에 의한 지연손해금을 지급하기로 한다.
+
+
+제6조 【부대경비 및 지급방법】
+
+    "을"은 본 건 업무에 소요된 제반비용을 "갑"에게 청구할 수 있으며, "갑"은 "을"의 청구에 응하여야 한다. 단, 청구비용의 범위는 "갑"과 "을"의 별도 합의에 따른다. 인쇄, 교통, 숙박 등의 부대경비는 청구받은 날로부터 14일 이내에 현금으로 지급하기로 한다.${special ? `\n\n    특이사항: ${special}` : ''}
+
+
+제7조 【자료】
+
+    "을"이 본 용역을 계속 추진하지 못하게 되었거나 "갑"이 정당한 사유로 관련 자료 등의 회수를 요청하는 경우 "을"은 지체 없이 이를 "갑"에게 반환하여야 한다. "을"은 용역수행기간 종료일 또는 본 계약의 해제·해지일로부터 1개월이 경과할 때까지 "갑"이 반환을 청구하지 않을 때에는 임의로 폐기할 수 있다.
+
+
+제8조 【용역의 한계 및 용역결과물의 이용】
+
+    "을"이 "갑"에게 제공하는 용역결과물은 "갑"의 의사결정을 위한 참고자료로서 제공되는 것이므로 본 건에 대한 의사결정 등 일체의 책임은 "갑"에게 전속된다. "을"의 사전 서면 동의 없이 제3자에게 제공할 수 없다.
+
+
+제9조 【추가용역】
+
+    제2조에 정한 용역의 범위를 벗어난 별도의 추가작업이 필요한 경우, 용역일정·범위 및 보수는 별도 합의서에 의한다.
+
+
+제10조 【계약일반조건의 효력】
+
+    별첨 계약일반조건은 본 계약서의 일부로 본다.
+
+
+─────────────────────────────────────
+
+이상의 계약내용을 증명하기 위하여 각 당사자의 적법한 대표자들이 계약서 2부를 작성하여 기명 날인하고 "갑"과 "을"이 각각 1부씩 보관한다.
+
+
+${cDate}
+
+
+(갑)  주    소 :  ${cAddr}
+      회 사 명 :  ${cName}
+      대 표 자 :  ${cCeo}                        (인)
+
+
+(을)  주    소 :  서울특별시 영등포구 여의나루로 60(여의도 포스트타워), 17층
+      회 사 명 :  이촌회계법인
+      대 표 자 :  대표이사 김명진                   (인)
+
+
+별첨: 계약일반조건`;
+
+  document.getElementById('resultBox').textContent = text;
+  go(3);
+}
+
+function copyText() {
+  const text = document.getElementById('resultBox').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('클립보드에 복사되었습니다.');
+  });
+}
+
+function printPage() {
+  window.print();
+}
+</script>
+
+<style>
+@media print {
+  header, .progress, .btn-row, .result-header { display: none !important; }
+  .result-box {
+    max-height: none;
+    border: none;
+    padding: 0;
+    font-size: 12pt;
+    line-height: 2;
+  }
+  body { background: #fff; }
+}
+</style>
+</body>
+</html>
